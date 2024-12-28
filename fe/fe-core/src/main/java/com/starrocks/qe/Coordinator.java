@@ -3284,7 +3284,7 @@ public class Coordinator {
          */
         private void toThriftForUniqueParams(TExecPlanFragmentParams uniqueParams, int fragmentIndex,
                                              FInstanceExecParam instanceExecParam, boolean enablePipelineEngine,
-                                             int accTabletSinkDop, int curTabletSinkDop)
+                                             int accTabletSinkDop, int curTabletSinkDop,string FileNamePrefix)
                 throws Exception {
             // if pipeline is enable and current fragment contain olap table sink, in fe we will 
             // calculate the number of all tablet sinks in advance and assign them to each fragment instance
@@ -3306,7 +3306,7 @@ public class Coordinator {
             if (fragment.getSink() instanceof ExportSink) {
                 ExportSink exportSink = (ExportSink) fragment.getSink();
                 if (exportSink.getFileNamePrefix() != null) {
-                    exportSink.setFileNamePrefix(exportSink.getFileNamePrefix() + fragmentIndex + "_");
+                    exportSink.setFileNamePrefix(FileNamePrefix + fragmentIndex + "_");
                 }
             }
             if (!uniqueParams.isSetFragment()) {
@@ -3396,6 +3396,13 @@ public class Coordinator {
             setBucketSeqToInstanceForRuntimeFilters();
 
             List<TExecPlanFragmentParams> paramsList = Lists.newArrayList();
+            ExportSink initExportSink = null;
+            String fileNamePrefix = null;
+
+            if (fragment.getSink() instanceof ExportSink) {
+                initExportSink = (ExportSink) fragment.getSink();
+                fileNamePrefix = exportSink.getFileNamePrefix();
+            }
             for (int i = 0; i < instanceExecParams.size(); ++i) {
                 final FInstanceExecParam instanceExecParam = instanceExecParams.get(i);
                 if (!inFlightInstanceIds.contains(instanceExecParam.instanceId)) {
@@ -3412,7 +3419,7 @@ public class Coordinator {
                 toThriftForCommonParams(params, instanceExecParam.getHost(), descTable, enablePipelineEngine,
                         tabletSinkTotalDop);
                 toThriftForUniqueParams(params, i, instanceExecParam, enablePipelineEngine,
-                        accTabletSinkDop, curTabletSinkDop);
+                        accTabletSinkDop, curTabletSinkDop,fileNamePrefix);
 
                 paramsList.add(params);
                 accTabletSinkDop += curTabletSinkDop;
@@ -3434,6 +3441,14 @@ public class Coordinator {
             fillRequiredFieldsToThrift(commonParams);
 
             List<TExecPlanFragmentParams> uniqueParamsList = Lists.newArrayList();
+            ExportSink initExportSink = null;
+            String fileNamePrefix = null;
+
+            if (fragment.getSink() instanceof ExportSink) {
+                initExportSink = (ExportSink) fragment.getSink();
+                fileNamePrefix = initExportSink.getFileNamePrefix();
+            }
+
             for (int i = 0; i < instanceExecParams.size(); ++i) {
                 final FInstanceExecParam instanceExecParam = instanceExecParams.get(i);
                 if (!inFlightInstanceIds.contains(instanceExecParam.instanceId)) {
@@ -3448,7 +3463,7 @@ public class Coordinator {
 
                 TExecPlanFragmentParams uniqueParams = new TExecPlanFragmentParams();
                 toThriftForUniqueParams(uniqueParams, i, instanceExecParam, enablePipelineEngine,
-                        accTabletSinkDop, curTabletSinkDop);
+                        accTabletSinkDop, curTabletSinkDop,fileNamePrefix);
                 fillRequiredFieldsToThrift(uniqueParams);
 
                 uniqueParamsList.add(uniqueParams);
